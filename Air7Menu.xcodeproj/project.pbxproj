@@ -1,0 +1,49 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+		A10000000000000000000001 /* Air7Menu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Air7Menu.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000002 /* Air7MenuApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Air7MenuApp.swift; sourceTree = "<group>"; };
+		A10000000000000000000003 /* EarbudModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarbudModel.swift; sourceTree = "<group>"; };
+		A10000000000000000000004 /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
+		A10000000000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10000000000000000000018 /* Air7FrameParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Air7FrameParser.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* Air7Monitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* Air7Monitor */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Air7Monitor; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000004 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
+		A10000000000000000000006 /* Sources */ = {isa = PBXGroup; children = (A10000000000000000000002, A10000000000000000000003, A10000000000000000000004, A10000000000000000000018,); path = Sources/Air7Menu; sourceTree = "<group>"; };
+		B10000000000000000000005 /* Air7Monitor */ = {isa = PBXGroup; children = (B10000000000000000000002,); path = Sources/Air7Monitor; sourceTree = "<group>"; };
+		A10000000000000000000007 /* Resources */ = {isa = PBXGroup; children = (A10000000000000000000005,); path = Resources; sourceTree = "<group>"; };
+		A10000000000000000000008 /* Products */ = {isa = PBXGroup; children = (A10000000000000000000001, B10000000000000000000003,); name = Products; sourceTree = "<group>"; };
+		A10000000000000000000009 /* Project root */ = {isa = PBXGroup; children = (A10000000000000000000006, B10000000000000000000005, A10000000000000000000007, A10000000000000000000008,); sourceTree = "<group>"; };
+		A1000000000000000000000A /* Air7MenuApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002; };
+		A1000000000000000000000B /* EarbudModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003; };
+		A1000000000000000000000C /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000004; };
+		A10000000000000000000019 /* Air7FrameParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018; };
+		B10000000000000000000001 /* Air7Monitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002; };
+		B10000000000000000000006 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004; };
+		A1000000000000000000000D /* Sources build phase */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000A, A1000000000000000000000B, A1000000000000000000000C, A10000000000000000000019,); runOnlyForDeploymentPostprocessing = 0; };
+		A1000000000000000000000E /* Frameworks build phase */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A1000000000000000000000F /* Resources build phase */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A10000000000000000000010 /* Air7Menu */ = {isa = PBXNativeTarget; buildConfigurationList = A10000000000000000000013; buildPhases = (A1000000000000000000000D, A1000000000000000000000E, A1000000000000000000000F, B10000000000000000000009,); buildRules = (); dependencies = (B1000000000000000000000E,); name = Air7Menu; productName = Air7Menu; productReference = A10000000000000000000001; productType = "com.apple.product-type.application"; };
+		A10000000000000000000011 /* Project */ = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 1600;}; buildConfigurationList = A10000000000000000000014; compatibilityVersion = "Xcode 15.0"; developmentRegion = en; hasScannedForEncodings = 0; mainGroup = A10000000000000000000009; productRefGroup = A10000000000000000000008; projectDirPath = ""; projectRoot = ""; targets = (A10000000000000000000010, B1000000000000000000000A,); };
+		B10000000000000000000007 /* Air7Monitor Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000006,); runOnlyForDeploymentPostprocessing = 0; };
+		B10000000000000000000008 /* Air7Monitor Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B10000000000000000000001,); runOnlyForDeploymentPostprocessing = 0; };
+		B10000000000000000000009 /* Embed Bluetooth monitor */ = {isa = PBXShellScriptBuildPhase; buildActionMask = 2147483647; files = (); inputPaths = ("$(BUILT_PRODUCTS_DIR)/Air7Monitor",); outputPaths = ("$(TARGET_BUILD_DIR)/$(WRAPPER_NAME)/Contents/MacOS/Air7Monitor",); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "set -e\nmkdir -p \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Contents/MacOS\"\ncp \"$BUILT_PRODUCTS_DIR/Air7Monitor\" \"$TARGET_BUILD_DIR/$WRAPPER_NAME/Contents/MacOS/Air7Monitor\"\n"; };
+		B1000000000000000000000A /* Air7Monitor */ = {isa = PBXNativeTarget; buildConfigurationList = B1000000000000000000000C; buildPhases = (B10000000000000000000008, B10000000000000000000007,); buildRules = (); dependencies = (); name = Air7Monitor; productName = Air7Monitor; productReference = B10000000000000000000003; productType = "com.apple.product-type.tool"; };
+		B1000000000000000000000D /* Air7Monitor target proxy */ = {isa = PBXContainerItemProxy; containerPortal = A10000000000000000000011; proxyType = 1; remoteGlobalIDString = B1000000000000000000000A; remoteInfo = Air7Monitor; };
+		B1000000000000000000000E /* Air7Monitor target dependency */ = {isa = PBXTargetDependency; target = B1000000000000000000000A; targetProxy = B1000000000000000000000D; };
+		A10000000000000000000012 /* Debug project config */ = {isa = XCBuildConfiguration; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 13.0; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Debug; };
+		A10000000000000000000015 /* Release project config */ = {isa = XCBuildConfiguration; buildSettings = {MACOSX_DEPLOYMENT_TARGET = 13.0; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Release; };
+		A10000000000000000000016 /* Debug target config */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.local.air7menu; PRODUCT_NAME = Air7Menu; SWIFT_EMIT_LOC_STRINGS = YES;}; name = Debug; };
+		A10000000000000000000017 /* Release target config */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Resources/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.local.air7menu; PRODUCT_NAME = Air7Menu; SWIFT_EMIT_LOC_STRINGS = YES;}; name = Release; };
+		A10000000000000000000013 /* Target config list */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000016, A10000000000000000000017,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A10000000000000000000014 /* Project config list */ = {isa = XCConfigurationList; buildConfigurations = (A10000000000000000000012, A10000000000000000000015,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		B1000000000000000000000F /* Air7Monitor Debug config */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; MACOSX_DEPLOYMENT_TARGET = 13.0; PRODUCT_BUNDLE_IDENTIFIER = com.local.air7menu.monitor; PRODUCT_NAME = Air7Monitor; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Debug; };
+		B10000000000000000000010 /* Air7Monitor Release config */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; MACOSX_DEPLOYMENT_TARGET = 13.0; PRODUCT_BUNDLE_IDENTIFIER = com.local.air7menu.monitor; PRODUCT_NAME = Air7Monitor; SDKROOT = macosx; SWIFT_VERSION = 5.0;}; name = Release; };
+		B1000000000000000000000C /* Air7Monitor config list */ = {isa = XCConfigurationList; buildConfigurations = (B1000000000000000000000F, B10000000000000000000010,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+	};
+	rootObject = A10000000000000000000011;
+}

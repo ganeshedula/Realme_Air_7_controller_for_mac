@@ -1,0 +1,19 @@
+# Local environment values and secrets
+.env
+.env.*
+!.env.example
+
+# macOS and Xcode user/build files
+.DS_Store
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# SwiftPM generated files
+.build/
+.swiftpm/
+
+# Locally built app bundles and release archives
+/Air 7 Menu.app/
+/release/Air7Menu.app/
+/release/Air7Menu-macOS.zip
