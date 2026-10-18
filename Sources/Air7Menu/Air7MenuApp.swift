@@ -10,9 +10,8 @@ struct Air7MenuApp: App {
         let model = EarbudModel()
         _model = StateObject(wrappedValue: model)
         appDelegate.model = model
-        // Show the pop-up if this launch was triggered by the monitor detecting
-        // a fresh earbud connection. The monitor writes a short-lived timestamp
-        // flag; consumeMonitorConnectionEvent() reads and clears it.
+        // Show the connection pop-up as soon as the target device is confirmed;
+        // battery values populate from the device as readings arrive.
         model.onConnectionDetected = { BatteryPopupController.shared.show(model: model) }
         // Exit when the target earbuds disconnect. The separate Bluetooth
         // monitor remains alive and can relaunch the app on the next connection.
@@ -20,10 +19,8 @@ struct Air7MenuApp: App {
             NSApplication.shared.terminate(nil)
         }
         DispatchQueue.main.async {
-            let monitorReportedConnection = model.consumeMonitorConnectionEvent()
-            if model.showOnConnection && (monitorReportedConnection || model.isConnected) {
-                BatteryPopupController.shared.show(model: model)
-            }
+            _ = model.consumeMonitorConnectionEvent()
+            model.presentPendingConnectionPopup()
         }
     }
 
@@ -32,8 +29,8 @@ struct Air7MenuApp: App {
             PopoverView(model: model, showBatteryPopup: {
                 model.refreshOutput()
                 BatteryPopupController.shared.show(model: model)
-            })
-                .frame(width: 380)
+            }, quitApp: quitApp)
+                .frame(width: Air7Design.contentWidth)
         } label: {
             Label("Air 7", systemImage: "airpodspro")
         }

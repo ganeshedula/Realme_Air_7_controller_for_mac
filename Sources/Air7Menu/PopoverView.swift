@@ -1,76 +1,82 @@
+import AppKit
 import SwiftUI
+
+enum Air7Design {
+    static let accent = Color(red: 0.10, green: 0.61, blue: 0.34)
+    static let warning = Color.orange
+    static let critical = Color.red
+    static let separator = Color.primary.opacity(0.08)
+    static let panelRadius: CGFloat = 18
+    static let cardRadius: CGFloat = 14
+    static let contentWidth: CGFloat = 352
+
+    static func isGenericDeviceName(_ name: String) -> Bool {
+        let compact = name.lowercased().filter { $0.isLetter || $0.isNumber }
+        return compact == "realmebudsair7"
+    }
+}
 
 struct PopoverView: View {
     @ObservedObject var model: EarbudModel
     var showBatteryPopup: () -> Void = {}
+    var quitApp: () -> Void = {}
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let realmeGreen = Color(red: 0.12, green: 0.82, blue: 0.48)
     @Namespace private var modeSelectionAnimation
 
-    private var deviceName: String {
-        guard let output = model.outputName, !output.isEmpty else { return "realme Buds Air 7" }
-        let normalized = output.lowercased()
-        if normalized.contains("realme") || normalized.contains("air 7") || normalized.contains("air7") {
-            return output
-        }
-        return "realme Buds Air 7"
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 10) {
             header
-            Divider().padding(.vertical, 12)
 
             if model.isConnected {
                 batterySummary
-                Divider().padding(.vertical, 12)
                 connectedControls
             } else {
-                Label(
-                    "Connect the earbuds in System Settings → Bluetooth. Controls follow the Mac’s current audio output.",
-                    systemImage: "info.circle"
-                )
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 6)
+                disconnectedMessage
             }
 
-            Divider().padding(.vertical, 10)
             footer
         }
-        .padding(16)
-        .frame(width: 380)
-        .tint(realmeGreen)
+        .padding(14)
+        .frame(width: Air7Design.contentWidth)
+        .tint(Air7Design.accent)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isConnected)
     }
 
     private var header: some View {
-        HStack(spacing: 11) {
+        HStack(spacing: 9) {
             Image(systemName: "airpodspro")
-                .font(.system(size: 25, weight: .medium))
-                .foregroundStyle(model.isConnected ? realmeGreen : Color.secondary)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(model.isConnected ? Air7Design.accent : Color.secondary)
+                .frame(width: 34, height: 34)
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(deviceName)
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("realme Buds Air 7")
+                    .font(.system(size: 16, weight: .semibold))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 HStack(spacing: 5) {
-                    if model.isConnected {
-                        Circle().fill(realmeGreen).frame(width: 6, height: 6)
-                    }
+                    Circle()
+                        .fill(model.isConnected ? Air7Design.accent : Color.secondary.opacity(0.55))
+                        .frame(width: 6, height: 6)
                     Text(model.connectionText)
-                        .font(.subheadline)
-                        .foregroundStyle(model.isConnected ? realmeGreen : Color.secondary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(model.isConnected ? Air7Design.accent : Color.secondary)
+                    if model.isConnected, let name = model.outputName, !name.isEmpty, !Air7Design.isGenericDeviceName(name) {
+                        Text("· \(name)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 }
             }
             Spacer(minLength: 8)
             Button(action: showBatteryPopup) {
                 Image(systemName: "rectangle.topright.inset.filled")
                     .font(.system(size: 14, weight: .medium))
-                    .frame(width: 28, height: 28)
+                    .frame(width: 25, height: 25)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
@@ -78,8 +84,8 @@ struct PopoverView: View {
             .accessibilityLabel("Show compact battery pop-up")
             Button(action: model.retryControls) {
                 Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(width: 28, height: 28)
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 25, height: 25)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
@@ -88,53 +94,66 @@ struct PopoverView: View {
         }
     }
 
+    private var disconnectedMessage: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle")
+                .font(.system(size: 16))
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Connect Doraemon").font(.subheadline.weight(.medium))
+                Text("Connect your earbuds in System Settings → Bluetooth. Battery and controls will appear here.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Air7Design.cardRadius, style: .continuous))
+    }
+
     private var batterySummary: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Battery")
-                .font(.headline)
-            VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Battery").font(.system(size: 15, weight: .semibold))
+            }
+            VStack(spacing: 6) {
+                // The Air 7 protocol exposes a case percentage but no lid
+                // state. A zero is the device's closed-case placeholder in
+                // this flow, so only show the case while it reports charge.
                 if let caseLevel = model.battery["Case"], caseLevel > 0 {
                     batteryCell("Case")
-                        .padding(.top, 3)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                    Rectangle()
-                        .fill(.primary.opacity(0.08))
-                        .frame(height: 1)
-                        .padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    Divider().opacity(0.45).padding(.horizontal, 14)
                 }
                 HStack(spacing: 8) {
                     batteryCell("Left")
                     batteryCell("Right")
                 }
             }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.battery["Case"])
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 17, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.24), .white.opacity(0.06), .white.opacity(0.12)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-                    .allowsHitTesting(false)
-            }
-            .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
+            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: model.battery["Case"])
         }
-        .padding(.top, 2)
     }
 
     private var connectedControls: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text("Earbud controls")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text("Listening controls").font(.system(size: 15, weight: .semibold))
+                Spacer()
+                if model.canControl {
+                    Label("Ready", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(Air7Design.accent)
+                }
+            }
 
-            if !model.controlStatus.isEmpty && model.controlStatus != "Air 7 control link connected." {
+            if !model.canControl && !model.controlStatus.isEmpty {
                 Text(model.controlStatus)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -143,18 +162,20 @@ struct PopoverView: View {
             }
 
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 9) {
-                    Text("Noise control")
-                        .font(.subheadline.weight(.medium))
-                    HStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Noise Control")
+                        .font(.system(size: 13, weight: .medium))
+                    HStack(spacing: 2) {
                         ForEach(Air7NoiseMode.allCases) { mode in
                             modeButton(mode)
                         }
                     }
+                    .padding(2)
+                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .padding(.bottom, 9)
+                .padding(.bottom, 6)
 
-                Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
+                Divider().opacity(0.4)
 
                 settingRow("360° Spatial Audio", icon: "dot.radiowaves.left.and.right") {
                     if model.spatialAvailable {
@@ -173,14 +194,21 @@ struct PopoverView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 5)
 
-                Rectangle().fill(.primary.opacity(0.08)).frame(height: 1)
+                Divider().opacity(0.4)
 
                 settingRow("EQ Presets", icon: "slider.horizontal.3") {
                     Menu {
                         ForEach(model.eqPresets) { preset in
-                            Button(preset.title) { model.setEQ(preset.id) }
+                            Button {
+                                model.setEQ(preset.id)
+                            } label: {
+                                HStack {
+                                    Text(preset.title)
+                                    if model.eqPreset == preset.title { Image(systemName: "checkmark") }
+                                }
+                            }
                         }
                     } label: {
                         HStack(spacing: 5) {
@@ -191,20 +219,17 @@ struct PopoverView: View {
                                 .foregroundStyle(.tertiary)
                         }
                         .font(.subheadline)
+                        .padding(.vertical, 5)
+                        .padding(.horizontal, 7)
+                        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                     }
                     .menuStyle(.borderlessButton)
                     .disabled(!model.eqAvailable)
                     .accessibilityLabel("EQ preset: \(model.eqPreset ?? "Choose preset")")
                 }
-                .padding(.top, 8)
+                .padding(.top, 5)
             }
-            .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .strokeBorder(.white.opacity(0.13), lineWidth: 1)
-                    .allowsHitTesting(false)
-            }
+            .padding(.horizontal, 1)
         }
     }
 
@@ -221,31 +246,22 @@ struct PopoverView: View {
         case .transparency: "Transparency"
         }
         return Button {
-            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.2)) {
-                model.setNoiseMode(mode)
-            }
+            model.setNoiseMode(mode)
         } label: {
-            VStack(spacing: 6) {
+            VStack(spacing: 5) {
                 Image(systemName: icon)
-                    .font(.system(size: 17, weight: .medium))
-                    .scaleEffect(selected ? 1.08 : 1)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: selected)
-                    .frame(width: 34, height: 34)
-                    .background(selected ? realmeGreen.opacity(0.18) : Color.primary.opacity(0.06), in: Circle())
+                    .font(.system(size: 13, weight: .medium))
                 Text(title)
-                    .font(.system(size: 10, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.82)
             }
-            .foregroundStyle(selected ? realmeGreen : Color.secondary)
-            .frame(maxWidth: .infinity, minHeight: 55)
-            .background {
-                if selected {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(realmeGreen.opacity(0.11))
-                        .matchedGeometryEffect(id: "selected-noise-mode", in: modeSelectionAnimation)
-                }
-            }
+            .foregroundStyle(selected ? Air7Design.accent : Color.primary.opacity(0.76))
+            .frame(maxWidth: .infinity, minHeight: 43)
+            .background(selected ? Air7Design.accent.opacity(0.09) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .matchedGeometryEffect(id: selected ? "selected-noise-mode" : "noise-mode-\(mode.id)", in: modeSelectionAnimation, isSource: selected)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: selected)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -261,89 +277,184 @@ struct PopoverView: View {
     ) -> some View {
         HStack(spacing: 9) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .regular))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(.secondary)
-                .frame(width: 18)
+                .frame(width: 20)
                 .accessibilityHidden(true)
-            Text(title).font(.body)
+            Text(title).font(.system(size: 13))
             Spacer(minLength: 8)
             control()
         }
-        .frame(minHeight: 28)
+        .frame(minHeight: 27)
     }
 
     private func batteryCell(_ side: String) -> some View {
         let level = model.battery[side]
-        let tint: Color = (level ?? 100) <= 20 ? .orange : realmeGreen
         let isCase = side == "Case"
-        return VStack(spacing: 7) {
-            ZStack {
-                Circle().stroke(.quaternary, lineWidth: 4)
-                if let level {
-                    Circle()
-                        .trim(from: 0, to: CGFloat(level) / 100)
-                        .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: level)
-                }
-                VStack(spacing: 1) {
-                    Image(systemName: isCase ? "battery.100percent" : "earbuds")
-                        .font(.system(size: isCase ? 14 : 15, weight: .medium))
-                        .rotationEffect(.degrees(side == "Left" ? -18 : (side == "Right" ? 18 : 0)))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                    Text(level.map { "\($0)%" } ?? "—")
-                        .font(.system(size: isCase ? 12 : 11, design: .rounded).monospacedDigit().weight(.semibold))
-                        .foregroundStyle(level == nil ? .secondary : .primary)
-                        .minimumScaleFactor(0.7)
-                }
-            }
-            .frame(width: isCase ? 68 : 60, height: isCase ? 68 : 60)
-            .accessibilityHidden(true)
-            Text(isCase ? "Charging Case" : side)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-        }
+        let chargingState = model.chargingState[side] ?? .unknown
+        return BatteryStatusIndicator(
+            level: level,
+            chargingState: chargingState,
+            deviceName: isCase ? "Charging Case" : "\(side) Earbud",
+            symbol: isCase ? "battery.100percent" : "earbuds",
+            rotation: side == "Left" ? -18 : (side == "Right" ? 18 : 0),
+            size: isCase ? 56 : 54,
+            accent: Air7Design.accent
+        )
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(level.map { "\(isCase ? "Charging case" : side) battery \($0) percent" } ?? "\(isCase ? "Charging case" : side) battery unavailable")
     }
 
+/// Shared circular battery display. Ring progress always reflects the reported
+/// percentage; charging only adds a restrained glow and bolt when confirmed.
+private struct BatteryStatusIndicator: View {
+    let level: Int?
+    let chargingState: Air7ChargingState
+    let deviceName: String
+    let symbol: String
+    let rotation: Double
+    let size: CGFloat
+    let accent: Color
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
+
+    private var isCharging: Bool { chargingState == .charging }
+    private var tint: Color {
+        guard let level else { return accent }
+        if level <= 10 { return Air7Design.critical }
+        if level <= 20 { return Air7Design.warning }
+        return accent
+    }
+
+    var body: some View {
+        VStack(spacing: 7) {
+            ZStack {
+                Circle().stroke(Color.primary.opacity(0.09), lineWidth: 4)
+                if let level {
+                    Circle()
+                        .trim(from: 0, to: CGFloat(min(max(level, 0), 100)) / 100)
+                        .stroke(tint, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: level)
+                }
+                VStack(spacing: 0) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 10, weight: .medium))
+                        .rotationEffect(.degrees(rotation))
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text(level.map { String($0) } ?? "—")
+                            .font(.system(size: size > 64 ? 18 : 16, design: .rounded).monospacedDigit().weight(.semibold))
+                            .foregroundStyle(level == nil ? .secondary : .primary)
+                        if level != nil {
+                            Text("%").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                if isCharging {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 17, height: 17)
+                        .background(accent, in: Circle())
+                        .overlay(Circle().strokeBorder(.regularMaterial, lineWidth: 1.5))
+                        .offset(x: size * 0.36, y: -size * 0.36)
+                        .opacity(reduceMotion ? 1 : (pulse ? 1 : 0.72))
+                }
+            }
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+            VStack(spacing: 2) {
+                Text(deviceName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                if chargingState == .charging || chargingState == .notCharging {
+                    HStack(spacing: 3) {
+                        if isCharging { Image(systemName: "bolt.fill") }
+                        Text(isCharging ? "Charging" : "Not charging")
+                    }
+                    .font(.system(size: 9.5, weight: isCharging ? .medium : .regular))
+                    .foregroundStyle(isCharging ? accent : Color.secondary)
+                }
+            }
+        }
+        .onAppear { if isCharging { updatePulse() } }
+        .onChange(of: chargingState) { _ in updatePulse() }
+        .onChange(of: reduceMotion) { _ in updatePulse() }
+        .onDisappear { pulse = false }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityValue(level.map { "\($0) percent" } ?? "Unavailable")
+    }
+
+    private var accessibilityDescription: String {
+        let name = deviceName == "Charging Case" ? "Charging case" : deviceName
+        let battery = level.map { "battery \($0) percent" } ?? "battery unavailable"
+        return switch chargingState {
+        case .charging: "\(name) \(battery), charging"
+        case .notCharging: "\(name) \(battery), not charging"
+        case .unknown: "\(name) \(battery)"
+        }
+    }
+
+    private func updatePulse() {
+        guard isCharging, !reduceMotion else {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { pulse = false }
+            return
+        }
+        pulse = false
+        withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
+            pulse = true
+        }
+    }
+}
+
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
             Toggle("Show pop-up when earbuds connect", isOn: Binding(
                 get: { model.showOnConnection },
                 set: model.setShowOnConnection
             ))
             .toggleStyle(.checkbox)
-            .font(.subheadline)
+            .controlSize(.small)
+            .font(.system(size: 12))
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             Toggle("Launch at login", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: model.setLaunchAtLogin
             ))
             .toggleStyle(.checkbox)
-            .font(.subheadline)
+            .controlSize(.small)
+            .font(.system(size: 12))
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack {
-                Text("Quit App")
+                Button(action: quitApp) {
+                    Label("Quit Air 7 Menu", systemImage: "power")
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 12))
+                .accessibilityHint("Quits the menu bar app")
                 Spacer()
                 Text("⇧⌘R")
-                    .font(.system(.caption, design: .rounded).weight(.medium).monospaced())
+                    .font(.system(size: 11, design: .rounded).monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
-            .font(.system(.caption, design: .rounded))
-            .foregroundStyle(.secondary)
-            .padding(.leading, 26)
-            .padding(.trailing, 2)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Quit App, Shift Command R")
+            .padding(.top, 1)
         }
+        .padding(.top, 1)
     }
 }
 
 private struct LowBatteryFloatingAlert: View {
     let levels: [String: Int]
-    private let warning = Color(red: 1.0, green: 0.68, blue: 0.32)
+    private var isCritical: Bool { levels.values.contains { $0 <= 10 } }
+    private var warning: Color { isCritical ? Air7Design.critical : Air7Design.warning }
 
     private var affectedSides: [String] { ["Left", "Right"].filter { levels[$0] != nil } }
     private var sideDescription: String { affectedSides.count == 2 ? "Both" : (affectedSides.first ?? "Earbud") }
@@ -359,7 +470,7 @@ private struct LowBatteryFloatingAlert: View {
                 .frame(width: 38, height: 40)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Low Battery")
+                Text(isCritical ? "Critical Battery" : "Low Battery")
                     .font(.system(.headline, design: .rounded).weight(.semibold))
                 HStack(spacing: 7) {
                     Text(sideDescription)
@@ -377,97 +488,81 @@ private struct LowBatteryFloatingAlert: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .frame(width: 340, height: 72)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay {
-            Capsule().strokeBorder(
-                LinearGradient(
-                    colors: [.white.opacity(0.27), .white.opacity(0.07), warning.opacity(0.22)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 1
-            )
-            .allowsHitTesting(false)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 16, y: 7)
+        .background(.regularMaterial, in: Capsule())
+        .overlay(Capsule().strokeBorder(.primary.opacity(0.06)))
+        .shadow(color: .black.opacity(0.14), radius: 12, y: 5)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Low battery. \(sideDescription). \(batteryDescription)")
+        .accessibilityLabel("\(isCritical ? "Critical" : "Low") battery. \(sideDescription). \(batteryDescription)")
     }
 }
 
 private struct BatteryPopupView: View {
     @ObservedObject var model: EarbudModel
-    private let accent = Color(red: 0.12, green: 0.82, blue: 0.48)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 9) {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack(spacing: 10) {
                 Image(systemName: "airpodspro")
-                    .font(.system(size: 21, weight: .medium))
-                    .foregroundStyle(accent)
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Air7Design.accent)
+                    .frame(width: 34, height: 34)
+                    .background(Air7Design.accent.opacity(0.11), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(model.outputName ?? "Air 7").font(.headline).lineLimit(1)
+                    Text("realme Buds Air 7").font(.headline).lineLimit(1)
                     HStack(spacing: 5) {
-                        Circle().fill(accent).frame(width: 6, height: 6)
-                        Text("Connected").font(.caption).foregroundStyle(accent)
+                        Circle().fill(Air7Design.accent).frame(width: 6, height: 6)
+                        Text("Connected").font(.caption).foregroundStyle(Air7Design.accent)
+                        if let name = model.outputName, !name.isEmpty, !Air7Design.isGenericDeviceName(name) {
+                            Text("· \(name)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
                     }
                 }
-                Spacer(minLength: 0)
+                Spacer()
             }
 
-            HStack(spacing: 12) {
+            HStack(spacing: 9) {
                 batteryCell("Left")
                 batteryCell("Right")
             }
         }
-        .padding(18)
-        .frame(width: 480)
-        .background {
-            if #available(macOS 26.0, *) {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-            } else {
-                RoundedRectangle(cornerRadius: 28, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                    }
-            }
-        }
-        .tint(accent)
+        .padding(15)
+        .frame(width: 366)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.primary.opacity(0.06)))
+        .shadow(color: .black.opacity(0.14), radius: 14, y: 5)
+        .tint(Air7Design.accent)
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func batteryCell(_ side: String) -> some View {
         let level = model.battery[side]
-        return HStack(spacing: 9) {
-            Image(systemName: "earbuds")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(accent)
-                .rotationEffect(.degrees(side == "Left" ? -18 : 18))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(side).font(.caption).foregroundStyle(.secondary)
+        let state = model.chargingState[side] ?? .unknown
+        let tint: Color = level.map { $0 <= 10 ? Air7Design.critical : ($0 <= 20 ? Air7Design.warning : Air7Design.accent) } ?? Air7Design.accent
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 5) {
+                Image(systemName: "earbuds").font(.system(size: 11, weight: .medium)).foregroundStyle(tint)
+                Text(side).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                if state == .charging { Image(systemName: "bolt.fill").font(.system(size: 9, weight: .bold)).foregroundStyle(tint) }
+            }
+            HStack(spacing: 8) {
                 Text(level.map { "\($0)%" } ?? "—")
-                    .font(.system(.title3, design: .rounded).monospacedDigit().weight(.semibold))
+                    .font(.system(.title2, design: .rounded).monospacedDigit().weight(.semibold))
+                    .contentTransition(.numericText())
+                ProgressView(value: Double(level ?? 0), total: 100)
+                    .tint(tint)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityHidden(true)
             }
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            if #available(macOS 26.0, *) {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            } else {
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.regularMaterial)
-            }
-        }
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: Air7Design.cardRadius, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(level.map { "\(side) battery \($0) percent" } ?? "\(side) battery unavailable")
+        .accessibilityLabel("\(side) earbud battery")
+        .accessibilityValue(level.map { "\($0) percent" } ?? "Unavailable")
     }
 }
 
@@ -481,6 +576,7 @@ final class BatteryPopupController {
         dismissalTimer?.invalidate()
         dismissalTimer = nil
         panel?.orderOut(nil)
+        panel?.alphaValue = 1
     }
 
     func show(model: EarbudModel) {
@@ -497,7 +593,7 @@ final class BatteryPopupController {
             batteryPanel = panel
         } else {
             let created = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: 480, height: 148),
+                contentRect: NSRect(x: 0, y: 0, width: 366, height: 150),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -515,7 +611,7 @@ final class BatteryPopupController {
         }
 
         batteryPanel.contentView = NSHostingView(rootView: BatteryPopupView(model: model))
-        batteryPanel.setContentSize(NSSize(width: 480, height: 148))
+        batteryPanel.setContentSize(NSSize(width: 366, height: 150))
         if let screen = NSScreen.main ?? NSScreen.screens.first {
             let top = screen.safeAreaInsets.top > 0
                 ? screen.frame.maxY - screen.safeAreaInsets.top
@@ -525,11 +621,25 @@ final class BatteryPopupController {
                 y: top - batteryPanel.frame.height - 8
             ))
         }
+        batteryPanel.alphaValue = 0
         batteryPanel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.18
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            batteryPanel.animator().alphaValue = 1
+        }
         NSLog("Air7Menu battery pop-up ordered front; visible=%d", batteryPanel.isVisible)
         dismissalTimer?.invalidate()
-        dismissalTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak batteryPanel] _ in
-            batteryPanel?.orderOut(nil)
+        dismissalTimer = Timer.scheduledTimer(withTimeInterval: 4, repeats: false) { [weak batteryPanel] _ in
+            guard let batteryPanel else { return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.18
+                context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+                batteryPanel.animator().alphaValue = 0
+            }, completionHandler: {
+                batteryPanel.orderOut(nil)
+                batteryPanel.alphaValue = 1
+            })
         }
     }
 }

@@ -1,6 +1,6 @@
 # Air7Menu local release report
 
-Generated: 2026-10-13 17:18 IST; amended after UI runtime check: 2026-10-13
+Generated: 2026-10-13 17:18 IST; amended after UI runtime check: 2026-10-13; charging-state fix: 2026-10-14
 
 ## Environment and project
 
@@ -57,6 +57,14 @@ Not verified: physical earbud discovery/connection, disconnect/reconnect, left/r
 The helper is embedded at `Air7Menu.app/Contents/MacOS/Air7Monitor`. The current user LaunchAgent still points to `/Users/ganesh/Downloads/Earbud app/Air 7 Menu.app/Contents/MacOS/Air7Monitor`; this task did not change that user setting. After placing this local bundle at its intended permanent path, use the app's Launch at Login setting to refresh the helper path if needed.
 
 ## Deliverables and limitations
+
+## Charging-state fix (2026-10-14)
+
+- The battery decoder now preserves bit 7 of each battery value as the charging flag and uses the lower seven bits for the percentage. The UI animates and labels a component only when that flag says charging; it labels non-charging and unavailable states distinctly. Missing device entries remain unknown rather than being guessed.
+- This flag mapping follows the documented OPOv1 protocol implementation in [OppoPods](https://github.com/Leaf-lsgtky/OppoPods) (`0x8106` battery responses and `0x0204` battery push reports). It is community reverse-engineering documentation; Air 7 hardware was not independently captured to confirm the mapping.
+- The refreshed Debug and Release builds compile successfully, and the Swift package suite passes 12 tests, including charging-flag decode cases. The local app, release app, and ZIP were regenerated on 2026-10-14 14:14 IST.
+- A live Bluetooth session could not be verified during the final UI check: the app reported the control channel unavailable and battery status unavailable. Consequently, no real-device charging animation has been observed in this run.
+- Refreshed artifacts: `../Air 7 Menu.app`, `Air7Menu.app`, and `Air7Menu-macOS.zip`.
 
 - `release/Air7Menu.app` — Release build, arm64, bundle integrity verified, ad-hoc signed for local use. The Release app launched successfully through desktop UI and displayed the disconnected-state popover.
 - `release/Air7Menu-macOS.zip` — ZIP containing the app bundle; ZIP integrity and extracted bundle signature were checked separately.

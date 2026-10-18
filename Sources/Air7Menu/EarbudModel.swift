@@ -13,6 +13,23 @@ enum Air7NoiseMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+/// Charging is intentionally separate from battery level. The current Air 7
+/// OPOv1 battery payload reports percentages only, so these remain unknown
+/// until a verified protocol field is available.
+enum Air7ChargingState: Equatable {
+    case charging
+    case notCharging
+    case unknown
+
+    var menuLabel: String {
+        switch self {
+        case .charging: "Charging"
+        case .notCharging: "Not charging"
+        case .unknown: "Charging status unavailable"
+        }
+    }
+}
+
 enum Air7ANCStrength: String, CaseIterable, Identifiable {
     case smart = "Smart"
     case max = "Max"
@@ -53,13 +70,14 @@ private final class BudsLink: NSObject, IOBluetoothRFCOMMChannelDelegate, IOBlue
         let knownAddress = UserDefaults.standard.string(forKey: "air7.bluetoothAddress")
         let byKnownAddress = knownAddress.flatMap { address in devices.first(where: { ($0.addressString ?? "").caseInsensitiveCompare(address) == .orderedSame && $0.isConnected() }) }
         let byAudioRoute = audioAddress.flatMap { address in devices.first(where: { ($0.addressString ?? "").lowercased() == address.lowercased() && $0.isConnected() }) }
+        let preferred = Self.normalizedDeviceName(preferredName ?? "")
         let named = devices.first(where: { d in
-            let name = (d.name ?? "").lowercased()
-            return d.isConnected() && (name.contains("realme") || name.contains("air 7") || (!name.isEmpty && name == (preferredName ?? "").lowercased()))
+            let name = Self.normalizedDeviceName(d.name ?? "")
+            return d.isConnected() && Self.isAir7Name(name, preferredName: preferred)
         })
         let connected = devices.filter { $0.isConnected() }
         NSLog("Air7Menu Bluetooth lookup: paired=%d connected=%d routeAddress=%d namedMatch=%d", devices.count, connected.count, audioAddress == nil ? 0 : 1, named == nil ? 0 : 1)
-        guard let candidate = byKnownAddress ?? named ?? byAudioRoute else {
+        guard let candidate = byKnownAddress ?? byAudioRoute ?? named else {
             completion("Could not match the active audio route to a paired Bluetooth device. Keep the Air 7 connected and try Refresh."); return
         }
         guard !(candidate.addressString ?? "").isEmpty else {
@@ -97,6 +115,19 @@ private final class BudsLink: NSObject, IOBluetoothRFCOMMChannelDelegate, IOBlue
         let pattern = #"(?i)([0-9a-f]{2})[:-]([0-9a-f]{2})[:-]([0-9a-f]{2})[:-]([0-9a-f]{2})[:-]([0-9a-f]{2})[:-]([0-9a-f]{2})"#
         guard let range = value.range(of: pattern, options: .regularExpression) else { return nil }
         return value[range].replacingOccurrences(of: "-", with: ":")
+    }
+
+    private static func normalizedDeviceName(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private static func isAir7Name(_ name: String, preferredName: String) -> Bool {
+        name == "doraemon"
+            || name.contains("realme buds air 7")
+            || name.contains("realme buds air7")
+            || name.contains("air 7")
+            || name.contains("air7")
+            || (!preferredName.isEmpty && name == preferredName)
     }
     @objc(sdpQueryComplete:status:)
     func sdpQueryComplete(_ queried: IOBluetoothDevice!, status: IOReturn) {
@@ -240,6 +271,10 @@ final class EarbudModel: ObservableObject {
     @Published private(set) var eqPreset: String?
     @Published private(set) var eqAvailable = false
     @Published private(set) var battery: [String: Int] = [:]
+    /// The Air 7 battery payload does not provide a verified charging state.
+    @Published private(set) var chargingState: [String: Air7ChargingState] = [
+        "Case": .unknown, "Left": .unknown, "Right": .unknown
+    ]
     private let buds = BudsLink()
     private let speechSynthesizer = AVSpeechSynthesizer()
     private var controlReady = false
@@ -247,8 +282,10 @@ final class EarbudModel: ObservableObject {
     private var productReplyPending = false
     private var syncing = false
     private var settingMaximumANC = false
-    private var batteryLowState: [String: Bool] = [:]
-    private var hasBatteryBaseline = false
+    /// Highest alert stage already reached by each earbud: 30 means above 20%,
+    /// 20 means the low-battery alert was reached, and 10 means critical.
+    private var batteryAlertStage: [String: Int] = [:]
+    private var connectionPopupPending = false
     private var connectionNotificationPending = false
     private var earbudBluetoothConnected = false
     private var disconnectTask: Task<Void, Never>?
@@ -370,11 +407,16 @@ final class EarbudModel: ObservableObject {
         connected = isConnected
         earbudBluetoothConnected = isConnected
         if let name, !name.isEmpty { outputName = name }
+        if isConnected != wasConnected {
+            resetChargingStatesToUnknown()
+            batteryAlertStage.removeAll()
+        }
         if isConnected && !wasConnected {
             disconnectTask?.cancel()
             disconnectTask = nil
             NSLog("Air7Menu paired Air 7 Bluetooth connection detected")
-            if showOnConnection { onConnectionDetected?() }
+            connectionPopupPending = showOnConnection
+            presentPendingConnectionPopup()
         }
         if !isConnected {
             connectionNotificationPending = false
@@ -399,7 +441,16 @@ final class EarbudModel: ObservableObject {
 
     func setShowOnConnection(_ enabled: Bool) {
         showOnConnection = enabled
+        if !enabled { connectionPopupPending = false }
         UserDefaults.standard.set(enabled, forKey: "air7.showPopupOnConnection")
+    }
+
+    func presentPendingConnectionPopup() {
+        guard connectionPopupPending, showOnConnection,
+              let onConnectionDetected,
+              isConnected, outputName?.isEmpty == false else { return }
+        connectionPopupPending = false
+        onConnectionDetected()
     }
 
     /// Consumes the notification written by the background monitor immediately
@@ -415,29 +466,48 @@ final class EarbudModel: ObservableObject {
 
         connected = true
         earbudBluetoothConnected = true
+        connectionPopupPending = showOnConnection
         if let name = defaults.string(forKey: connectionEventNameKey), !name.isEmpty {
             outputName = name
         }
+        presentPendingConnectionPopup()
         if !controlReady && !connectingControls { connectControls() }
         NSLog("Air7Menu received a Bluetooth connection event from Air7Monitor")
         return true
     }
 
     private func handleMonitorConnectionEvent() {
-        guard consumeMonitorConnectionEvent(), showOnConnection else { return }
-        onConnectionDetected?()
+        _ = consumeMonitorConnectionEvent()
     }
 
     private func configureBluetoothMonitor() {
-        // Only READ the saved preference to sync the UI toggle.
-        // Do NOT call setLaunchAtLogin() here — that rewrites and re-bootstraps
-        // the launch agent plist on every app launch, which overwrites any manual
-        // fixes and always resolves Bundle.main to whichever path launched the app.
-        // The plist is only written/updated when the user explicitly toggles the
-        // "Launch at login" checkbox in the UI.
         let defaults = UserDefaults.standard
         let saved = defaults.object(forKey: "air7.autoLaunchMonitor") as? Bool ?? true
         launchAtLogin = saved
+
+        guard saved else { return }
+
+        let label = "com.local.air7menu.monitor"
+        let agentURL = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+            .appendingPathComponent("\(label).plist")
+        let expectedMonitor = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/MacOS/Air7Monitor").path
+        let savedArguments = (try? Data(contentsOf: agentURL))
+            .flatMap { try? PropertyListSerialization.propertyList(from: $0, format: nil) as? [String: Any] }
+            .flatMap { $0["ProgramArguments"] as? [String] }
+        let plistIsCurrent = savedArguments?.first == expectedMonitor
+            && FileManager.default.isExecutableFile(atPath: expectedMonitor)
+        let job = runLaunchctl(["print", "gui/\(getuid())/\(label)"])
+        let jobIsCurrent = job.success && job.output.contains(expectedMonitor)
+
+        // Install the watcher on first run, or repair it after the app bundle
+        // moves. A correctly loaded job is left alone so manual plist edits
+        // are preserved across ordinary launches.
+        if !plistIsCurrent || !jobIsCurrent {
+            NSLog("Air7Menu Bluetooth monitor is missing or points to an old app path; installing it")
+            setLaunchAtLogin(true)
+        }
     }
 
     func refreshOutput() {
@@ -625,15 +695,24 @@ final class EarbudModel: ObservableObject {
         }
     }
     private func parseBattery(_ p: [UInt8]) {
-        guard let values = Air7BatteryDecoder.decode(p) else { return }
+        guard let snapshot = Air7BatteryDecoder.decodeSnapshot(p) else { return }
+        let values = snapshot.levels
+        var nextChargingStates: [String: Air7ChargingState] = [
+            "Case": .unknown, "Left": .unknown, "Right": .unknown
+        ]
+        snapshot.chargingStates.forEach { nextChargingStates[$0.key] = $0.value }
         // Avoid invalidating every battery-dependent SwiftUI view when the
         // earbuds repeat the same status frame.
         if battery != values { battery = values }
+        if chargingState != nextChargingStates { chargingState = nextChargingStates }
         handleLowBatteryTransitions(in: values)
-        if connectionNotificationPending {
-            connectionNotificationPending = false
-            postConnectionNotification(battery: values)
-        }
+    }
+
+    private func resetChargingStatesToUnknown() {
+        let unknown: [String: Air7ChargingState] = [
+            "Case": .unknown, "Left": .unknown, "Right": .unknown
+        ]
+        if chargingState != unknown { chargingState = unknown }
     }
 
     private func postConnectionNotification(battery: [String: Int]?) {
@@ -676,28 +755,19 @@ final class EarbudModel: ObservableObject {
         let sides = ["Left", "Right"]
         guard sides.contains(where: { values[$0] != nil }) else { return }
 
-        var crossedBelowThreshold = false
+        var newlyAlerted: [String: Int] = [:]
         for side in sides {
             // Missing readings are unknown; retain state instead of treating them as 0%.
             guard let level = values[side] else { continue }
-            let isLow = level < 20
-
-            if !hasBatteryBaseline {
-                batteryLowState[side] = isLow
-            } else if let wasLow = batteryLowState[side] {
-                if !wasLow && isLow { crossedBelowThreshold = true }
-                batteryLowState[side] = isLow
-            } else {
-                // A side with no baseline is seeded without a startup alert.
-                batteryLowState[side] = isLow
-            }
+            let stage = level <= 10 ? 10 : (level <= 20 ? 20 : 30)
+            let previousStage = batteryAlertStage[side] ?? 30
+            if stage < previousStage { newlyAlerted[side] = level }
+            batteryAlertStage[side] = stage
         }
-        hasBatteryBaseline = true
 
-        guard crossedBelowThreshold else { return }
-        let lowReadings = values.filter { sides.contains($0.key) && $0.value < 20 }
-        guard !lowReadings.isEmpty else { return }
-        LowBatteryAlertController.shared.show(levels: lowReadings)
+        guard !newlyAlerted.isEmpty else { return }
+        NSLog("Air7Menu low-battery alert threshold reached: %@", newlyAlerted.description)
+        LowBatteryAlertController.shared.show(levels: newlyAlerted)
     }
     private func handlePush(_ cmd: UInt16, _ payload: [UInt8]) {
         if cmd == 0x0204, payload.first == 1 { parseBattery(Array(payload.dropFirst())) }

@@ -52,7 +52,7 @@ swift test
 
 The app uses CoreAudio to observe the default output and IOBluetooth to find a paired, connected device, discover its companion control service, and communicate over RFCOMM. The monitor helper observes Bluetooth connect and disconnect events.
 
-The Air 7 vendor protocol is not documented in the product specification. Public reverse-engineering material describes BBK `oppointeraction`/OPOv1 behavior on other earbuds, and one controller documents mappings for the realme Buds T500 Pro; that does not independently verify every Air 7 command or response. Treat device control and battery behavior as firmware-dependent. The [release report](release/BUILD-REPORT.md) describes checks performed for this build and scenarios that remain unverified; a successful build or visible UI is not proof of hardware behavior.
+The Air 7 vendor protocol is not documented in the product specification. Public reverse-engineering material describes BBK `oppointeraction`/OPOv1 behavior on other earbuds, and one controller documents mappings for the realme Buds T500 Pro; that does not independently verify every Air 7 command or response. The [OppoPods implementation](https://github.com/Leaf-lsgtky/OppoPods) documents battery values as index/raw pairs, with bit 7 indicating charging and bits 0–6 holding the percentage. Air 7 hardware confirmation remains outstanding, so treat device control and battery behavior as firmware-dependent. The [release report](release/BUILD-REPORT.md) describes checks performed for this build and scenarios that remain unverified; a successful build or visible UI is not proof of hardware behavior.
 
 ## Research sources
 

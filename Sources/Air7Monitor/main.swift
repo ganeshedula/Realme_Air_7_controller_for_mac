@@ -37,11 +37,11 @@ private final class Air7BluetoothMonitor: NSObject {
                 NSLog("Air7Monitor: earbuds already connected at startup — cleared stale explicit-quit flag")
             }
             recordConnectionEvent(for: device)
+            launchMainApp()
         }
-        // Do NOT call launchMainApp() here. The main app is launched at login
-        // by the launchd KeepAlive mechanism or the user's own action. The
-        // monitor's only job is to fire when earbuds *connect* while the main
-        // app is not running and the user has not explicitly quit it.
+        // If the earbuds connected before the monitor started (for example,
+        // during login), open the app now. launchMainApp() safely skips this
+        // when the app is already running.
     }
 
     @objc(deviceDidConnect:device:)
@@ -49,14 +49,10 @@ private final class Air7BluetoothMonitor: NSObject {
         guard let device, isAir7(device) else { return }
         watchDisconnect(for: device)
         recordConnectionEvent(for: device)
-        // Only relaunch the main app if the user has NOT explicitly quit it
-        // and the "show pop-up on connection" preference is enabled.
+        // Respect an explicit quit, but keep app launch separate from the
+        // pop-up preference. The main app decides whether to show a pop-up.
         guard !userExplicitlyQuit() else {
             NSLog("Air7Monitor: user explicitly quit — not relaunching the main app")
-            return
-        }
-        guard showOnConnection() else {
-            NSLog("Air7Monitor: show-on-connection disabled — not relaunching the main app")
             return
         }
         launchMainApp()

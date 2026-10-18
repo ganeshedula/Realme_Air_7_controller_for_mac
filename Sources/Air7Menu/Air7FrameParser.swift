@@ -143,10 +143,16 @@ final class Air7PendingRequests {
     }
 }
 
+struct Air7BatterySnapshot: Equatable {
+    let levels: [String: Int]
+    let chargingStates: [String: Air7ChargingState]
+}
+
 enum Air7BatteryDecoder {
-    /// Returns nil for malformed payloads. Missing device IDs remain absent;
-    /// a reported zero is preserved as a real reading.
-    static func decode(_ payload: [UInt8]) -> [String: Int]? {
+    /// The current Air 7 reports battery percentages for each entry. Keep the
+    /// legacy case charging display, but do not treat the earbuds' high bit as
+    /// a verified charging signal. Missing IDs remain absent; zero is a reading.
+    static func decodeSnapshot(_ payload: [UInt8]) -> Air7BatterySnapshot? {
         let offset: Int
         if payload.count >= 1, Int(payload[0]) * 2 + 1 == payload.count { offset = 0 }
         else if payload.count >= 2, Int(payload[1]) * 2 + 2 == payload.count { offset = 1 }
@@ -155,12 +161,25 @@ enum Air7BatteryDecoder {
         let count = Int(payload[offset])
         guard payload.count >= offset + 1 + count * 2 else { return nil }
         var values: [String: Int] = [:]
+        var chargingStates: [String: Air7ChargingState] = [:]
         for index in 0..<count {
             let id = payload[offset + 1 + index * 2]
-            let raw = payload[offset + 2 + index * 2] & 0x7F
+            let raw = payload[offset + 2 + index * 2]
             let key = [1: "Left", 2: "Right", 3: "Case"][Int(id)]
-            if let key { values[key] = min(Int(raw), 100) }
+            if let key {
+                values[key] = min(Int(raw & 0x7F), 100)
+                if key == "Case" {
+                    chargingStates[key] = raw & 0x80 == 0 ? .notCharging : .charging
+                } else {
+                    chargingStates[key] = .unknown
+                }
+            }
         }
-        return values
+        return Air7BatterySnapshot(levels: values, chargingStates: chargingStates)
+    }
+
+    /// Compatibility helper for existing battery-level consumers.
+    static func decode(_ payload: [UInt8]) -> [String: Int]? {
+        decodeSnapshot(payload)?.levels
     }
 }

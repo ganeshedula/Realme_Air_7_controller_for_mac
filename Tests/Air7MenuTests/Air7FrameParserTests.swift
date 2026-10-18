@@ -123,6 +123,33 @@ final class Air7FrameParserTests: XCTestCase {
         XCTAssertNil(Air7BatteryDecoder.decode([2, 1, 0]))
     }
 
+    func testBatteryDecoderPreservesPercentagesWithoutInferringCharging() {
+        let snapshot = Air7BatteryDecoder.decodeSnapshot([
+            3,
+            1, 0x94, // Left: 20%; high bit is not a verified charging flag
+            2, 0x14, // Right: 20%
+            3, 0xDA  // Case: 90%
+        ])
+
+        XCTAssertEqual(snapshot?.levels, ["Left": 20, "Right": 20, "Case": 90])
+        XCTAssertEqual(snapshot?.chargingStates, [
+            "Left": .unknown,
+            "Right": .unknown,
+            "Case": .charging
+        ])
+        XCTAssertEqual(Air7ChargingState.unknown.menuLabel, "Charging status unavailable")
+        XCTAssertEqual(Air7ChargingState.charging.menuLabel, "Charging")
+        XCTAssertEqual(Air7ChargingState.notCharging.menuLabel, "Not charging")
+    }
+
+    func testBatteryDecoderPreservesZeroAndUnknownForMissingDevice() {
+        let snapshot = Air7BatteryDecoder.decodeSnapshot([1, 1, 0x80])
+
+        XCTAssertEqual(snapshot?.levels, ["Left": 0])
+        XCTAssertEqual(snapshot?.chargingStates, ["Left": .unknown])
+        XCTAssertNil(snapshot?.chargingStates["Right"])
+    }
+
     private func frame(command: UInt16, sequence: UInt8, payload: [UInt8]) -> [UInt8] {
         let bodyLength = 7 + payload.count
         var encodedLength: [UInt8] = []
