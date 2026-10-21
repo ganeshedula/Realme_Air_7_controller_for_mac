@@ -2,13 +2,14 @@ import AppKit
 import SwiftUI
 
 enum Air7Design {
-    static let accent = Color(red: 0.10, green: 0.61, blue: 0.34)
+    static let accent = Color(red: 0.20, green: 0.82, blue: 0.57)
+    static let glassEdge = Color.white.opacity(0.13)
     static let warning = Color.orange
     static let critical = Color.red
     static let separator = Color.primary.opacity(0.08)
     static let panelRadius: CGFloat = 18
     static let cardRadius: CGFloat = 14
-    static let contentWidth: CGFloat = 352
+    static let contentWidth: CGFloat = 390
 
     static func isGenericDeviceName(_ name: String) -> Bool {
         let compact = name.lowercased().filter { $0.isLetter || $0.isNumber }
@@ -25,7 +26,7 @@ struct PopoverView: View {
     @Namespace private var modeSelectionAnimation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             header
 
             if model.isConnected {
@@ -37,18 +38,48 @@ struct PopoverView: View {
 
             footer
         }
-        .padding(14)
+        .padding(16)
         .frame(width: Air7Design.contentWidth)
+        .background {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(red: 0.08, green: 0.16, blue: 0.19).opacity(0.68), Color(red: 0.08, green: 0.10, blue: 0.17).opacity(0.82)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Ellipse()
+                    .fill(Air7Design.accent.opacity(0.15))
+                    .frame(width: 230, height: 120)
+                    .blur(radius: 48)
+                    .offset(x: -100, y: -150)
+                Ellipse()
+                    .fill(Color.blue.opacity(0.12))
+                    .frame(width: 190, height: 140)
+                    .blur(radius: 50)
+                    .offset(x: 150, y: 170)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Air7Design.glassEdge))
+        }
+        .preferredColorScheme(.dark)
         .tint(Air7Design.accent)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isConnected)
     }
 
     private var header: some View {
+        VStack(spacing: 11) {
         HStack(spacing: 9) {
             Image(systemName: "airpodspro")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(model.isConnected ? Air7Design.accent : Color.secondary)
                 .frame(width: 34, height: 34)
+                .background(Air7Design.accent.opacity(model.isConnected ? 0.14 : 0.06), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(Air7Design.accent.opacity(0.22)))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -92,6 +123,10 @@ struct PopoverView: View {
             .help("Refresh earbud status")
             .accessibilityLabel("Refresh earbud status")
         }
+        Rectangle()
+            .fill(Air7Design.glassEdge.opacity(0.75))
+            .frame(height: 1)
+        }
     }
 
     private var disconnectedMessage: some View {
@@ -114,9 +149,16 @@ struct PopoverView: View {
     }
 
     private var batterySummary: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Battery").font(.system(size: 15, weight: .semibold))
+                Text("BATTERY")
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(1.1)
+                    .foregroundStyle(.white.opacity(0.78))
+                Spacer()
+                Text("Live device data")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.48))
             }
             VStack(spacing: 6) {
                 // The Air 7 protocol exposes a case percentage but no lid
@@ -136,7 +178,8 @@ struct PopoverView: View {
             .padding(.horizontal, 6)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
-            .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(Air7Design.glassEdge.opacity(0.65)))
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: model.battery["Case"])
         }
     }
@@ -171,7 +214,8 @@ struct PopoverView: View {
                         }
                     }
                     .padding(2)
-                    .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).strokeBorder(Air7Design.glassEdge.opacity(0.65)))
                 }
                 .padding(.bottom, 6)
 
@@ -229,7 +273,10 @@ struct PopoverView: View {
                 }
                 .padding(.top, 5)
             }
-            .padding(.horizontal, 1)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 9)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Air7Design.glassEdge.opacity(0.7)))
         }
     }
 
@@ -259,7 +306,14 @@ struct PopoverView: View {
             }
             .foregroundStyle(selected ? Air7Design.accent : Color.primary.opacity(0.76))
             .frame(maxWidth: .infinity, minHeight: 43)
-            .background(selected ? Air7Design.accent.opacity(0.09) : Color.clear, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background {
+                if selected {
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.white.opacity(0.13), Air7Design.accent.opacity(0.12)], startPoint: .top, endPoint: .bottom))
+                        .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Air7Design.accent.opacity(0.34)))
+                        .shadow(color: Air7Design.accent.opacity(0.12), radius: 8)
+                }
+            }
             .matchedGeometryEffect(id: selected ? "selected-noise-mode" : "noise-mode-\(mode.id)", in: modeSelectionAnimation, isSource: selected)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: selected)
             .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -289,128 +343,14 @@ struct PopoverView: View {
     }
 
     private func batteryCell(_ side: String) -> some View {
-        let level = model.battery[side]
-        let isCase = side == "Case"
-        let chargingState = model.chargingState[side] ?? .unknown
-        return BatteryStatusIndicator(
-            level: level,
-            chargingState: chargingState,
-            deviceName: isCase ? "Charging Case" : "\(side) Earbud",
-            symbol: isCase ? "battery.100percent" : "earbuds",
-            rotation: side == "Left" ? -18 : (side == "Right" ? 18 : 0),
-            size: isCase ? 56 : 54,
+        BatteryBarCard(
+            title: side == "Case" ? "Case" : side,
+            level: model.battery[side],
+            chargingState: model.chargingState[side] ?? .unknown,
             accent: Air7Design.accent
         )
         .frame(maxWidth: .infinity)
     }
-
-/// Shared circular battery display. Ring progress always reflects the reported
-/// percentage; charging only adds a restrained glow and bolt when confirmed.
-private struct BatteryStatusIndicator: View {
-    let level: Int?
-    let chargingState: Air7ChargingState
-    let deviceName: String
-    let symbol: String
-    let rotation: Double
-    let size: CGFloat
-    let accent: Color
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pulse = false
-
-    private var isCharging: Bool { chargingState == .charging }
-    private var tint: Color {
-        guard let level else { return accent }
-        if level <= 10 { return Air7Design.critical }
-        if level <= 20 { return Air7Design.warning }
-        return accent
-    }
-
-    var body: some View {
-        VStack(spacing: 7) {
-            ZStack {
-                Circle().stroke(Color.primary.opacity(0.09), lineWidth: 4)
-                if let level {
-                    Circle()
-                        .trim(from: 0, to: CGFloat(min(max(level, 0), 100)) / 100)
-                        .stroke(tint, style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.24), value: level)
-                }
-                VStack(spacing: 0) {
-                    Image(systemName: symbol)
-                        .font(.system(size: 10, weight: .medium))
-                        .rotationEffect(.degrees(rotation))
-                        .foregroundStyle(.secondary)
-                        .accessibilityHidden(true)
-                    HStack(alignment: .firstTextBaseline, spacing: 1) {
-                        Text(level.map { String($0) } ?? "—")
-                            .font(.system(size: size > 64 ? 18 : 16, design: .rounded).monospacedDigit().weight(.semibold))
-                            .foregroundStyle(level == nil ? .secondary : .primary)
-                        if level != nil {
-                            Text("%").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                if isCharging {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 17, height: 17)
-                        .background(accent, in: Circle())
-                        .overlay(Circle().strokeBorder(.regularMaterial, lineWidth: 1.5))
-                        .offset(x: size * 0.36, y: -size * 0.36)
-                        .opacity(reduceMotion ? 1 : (pulse ? 1 : 0.72))
-                }
-            }
-            .frame(width: size, height: size)
-            .accessibilityHidden(true)
-            VStack(spacing: 2) {
-                Text(deviceName)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                if chargingState == .charging || chargingState == .notCharging {
-                    HStack(spacing: 3) {
-                        if isCharging { Image(systemName: "bolt.fill") }
-                        Text(isCharging ? "Charging" : "Not charging")
-                    }
-                    .font(.system(size: 9.5, weight: isCharging ? .medium : .regular))
-                    .foregroundStyle(isCharging ? accent : Color.secondary)
-                }
-            }
-        }
-        .onAppear { if isCharging { updatePulse() } }
-        .onChange(of: chargingState) { _ in updatePulse() }
-        .onChange(of: reduceMotion) { _ in updatePulse() }
-        .onDisappear { pulse = false }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityDescription)
-        .accessibilityValue(level.map { "\($0) percent" } ?? "Unavailable")
-    }
-
-    private var accessibilityDescription: String {
-        let name = deviceName == "Charging Case" ? "Charging case" : deviceName
-        let battery = level.map { "battery \($0) percent" } ?? "battery unavailable"
-        return switch chargingState {
-        case .charging: "\(name) \(battery), charging"
-        case .notCharging: "\(name) \(battery), not charging"
-        case .unknown: "\(name) \(battery)"
-        }
-    }
-
-    private func updatePulse() {
-        guard isCharging, !reduceMotion else {
-            var transaction = Transaction()
-            transaction.disablesAnimations = true
-            withTransaction(transaction) { pulse = false }
-            return
-        }
-        pulse = false
-        withAnimation(.easeInOut(duration: 1.35).repeatForever(autoreverses: true)) {
-            pulse = true
-        }
-    }
-}
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -448,7 +388,90 @@ private struct BatteryStatusIndicator: View {
             .padding(.top, 1)
         }
         .padding(.top, 1)
+        .padding(10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).strokeBorder(Air7Design.glassEdge.opacity(0.55)))
     }
+}
+
+/// Horizontal battery card matching the Stitch companion bar. Empty readings
+/// stay empty instead of suggesting a level the device has not reported.
+private struct BatteryBarCard: View {
+    let title: String
+    let level: Int?
+    let chargingState: Air7ChargingState
+    let accent: Color
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var isCharging: Bool { chargingState == .charging }
+    private var tint: Color {
+        guard let level else { return Color.white.opacity(0.38) }
+        if level <= 10 { return Air7Design.critical }
+        if level <= 20 { return Air7Design.warning }
+        return accent
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: title == "Case" ? "battery.100percent" : "earbuds")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.88))
+                Spacer(minLength: 0)
+                if isCharging {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(accent)
+                }
+            }
+            HStack(spacing: 12) {
+                Text(level.map { "\($0)%" } ?? "—")
+                    .font(.system(size: 20, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(level == nil ? Color.white.opacity(0.56) : .white)
+                    .contentTransition(.numericText())
+                    .frame(minWidth: 54, alignment: .leading)
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.07))
+                        if let level {
+                            Capsule()
+                                .fill(LinearGradient(colors: [tint, tint.opacity(0.78)], startPoint: .leading, endPoint: .trailing))
+                                .frame(width: geometry.size.width * CGFloat(min(max(level, 0), 100)) / 100)
+                                .shadow(color: tint.opacity(0.2), radius: 5)
+                                .animation(reduceMotion ? nil : .easeOut(duration: 0.28), value: level)
+                        }
+                    }
+                }
+                .frame(height: 8)
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.06)))
+                .accessibilityHidden(true)
+            }
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.10)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityValue(level.map { "\($0) percent" } ?? "Unavailable")
+    }
+
+    private var accessibilityDescription: String {
+        let name = title == "Case" ? "Charging case" : "\(title) earbud"
+        let battery = level.map { "battery \($0) percent" } ?? "battery unavailable"
+        return switch chargingState {
+        case .charging: "\(name) \(battery), charging"
+        case .notCharging: "\(name) \(battery), not charging"
+        case .unknown: "\(name) \(battery)"
+        }
+    }
+
 }
 
 private struct LowBatteryFloatingAlert: View {
@@ -489,8 +512,9 @@ private struct LowBatteryFloatingAlert: View {
         .padding(.vertical, 10)
         .frame(width: 340, height: 72)
         .background(.regularMaterial, in: Capsule())
-        .overlay(Capsule().strokeBorder(.primary.opacity(0.06)))
+        .overlay(Capsule().strokeBorder(Air7Design.glassEdge))
         .shadow(color: .black.opacity(0.14), radius: 12, y: 5)
+        .preferredColorScheme(.dark)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(isCritical ? "Critical" : "Low") battery. \(sideDescription). \(batteryDescription)")
     }
@@ -528,41 +552,29 @@ private struct BatteryPopupView: View {
         }
         .padding(15)
         .frame(width: 366)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(.primary.opacity(0.06)))
+        .background {
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(LinearGradient(colors: [Color(red: 0.08, green: 0.16, blue: 0.19).opacity(0.76), Color(red: 0.08, green: 0.10, blue: 0.17).opacity(0.9)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                }
+        }
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Air7Design.glassEdge))
         .shadow(color: .black.opacity(0.14), radius: 14, y: 5)
+        .preferredColorScheme(.dark)
         .tint(Air7Design.accent)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private func batteryCell(_ side: String) -> some View {
-        let level = model.battery[side]
-        let state = model.chargingState[side] ?? .unknown
-        let tint: Color = level.map { $0 <= 10 ? Air7Design.critical : ($0 <= 20 ? Air7Design.warning : Air7Design.accent) } ?? Air7Design.accent
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 5) {
-                Image(systemName: "earbuds").font(.system(size: 11, weight: .medium)).foregroundStyle(tint)
-                Text(side).font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                Spacer(minLength: 0)
-                if state == .charging { Image(systemName: "bolt.fill").font(.system(size: 9, weight: .bold)).foregroundStyle(tint) }
-            }
-            HStack(spacing: 8) {
-                Text(level.map { "\($0)%" } ?? "—")
-                    .font(.system(.title2, design: .rounded).monospacedDigit().weight(.semibold))
-                    .contentTransition(.numericText())
-                ProgressView(value: Double(level ?? 0), total: 100)
-                    .tint(tint)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityHidden(true)
-            }
-        }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: Air7Design.cardRadius, style: .continuous))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(side) earbud battery")
-        .accessibilityValue(level.map { "\($0) percent" } ?? "Unavailable")
+        BatteryBarCard(
+            title: side,
+            level: model.battery[side],
+            chargingState: model.chargingState[side] ?? .unknown,
+            accent: Air7Design.accent
+        )
+        .frame(maxWidth: .infinity)
     }
 }
 

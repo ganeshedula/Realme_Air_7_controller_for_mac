@@ -71,3 +71,10 @@ The helper is embedded at `Air7Menu.app/Contents/MacOS/Air7Monitor`. The current
 - `release/BUILD-REPORT.md` — This report.
 
 This is a local build and is not notarized or ready for unrestricted Gatekeeper distribution. The report records only point-in-time system resource readings; it does not establish a sustained performance improvement over a comparable baseline. Hardware-dependent behavior and longer profiling scenarios remain outstanding.
+
+## Liquid Glass UI refresh (2026-10-21)
+
+- Reworked the native SwiftUI menu popover to follow the Stitch layout more closely: a wider dark translucent glass panel, subtle emerald/blue ambient color, labeled battery dashboard with horizontal left/right progress cards, inset listening-control and preferences cards, and the matching compact battery banner. Missing readings show a dash and an empty track. Device battery readings and supported device controls remain live model values; Stitch mockup placeholders and unsupported feature claims are not displayed.
+- Release build succeeded with Xcode 27 (`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`). The Swift package suite passed all 12 tests.
+- Rebundled `Air 7 Menu.app` and `release/Air7Menu.app`, ad-hoc signed both, and regenerated `release/Air7Menu-macOS.zip`. `codesign --verify --deep --strict` passed on both bundles and `unzip -t` passed on the archive.
+- No connected-earbud hardware session or visual runtime inspection was performed as part of this refresh; the tests cover protocol parsing and callbacks, not the rendered appearance or Bluetooth behavior.
